@@ -33,16 +33,155 @@ class ScribdInterface:
     def print_header(self):
         """Afficher l'en-tête de l'interface"""
         print("\n" + "="*60)
-        print("🚀 INTERFACE SCRIBD - SCRAPER COMPLET")
+        print("🚀 INTERFACE SCRIBD - SCRAPER MULTI-DOCUMENTS")
         print("="*60)
         print("Extrait, trie et convertit en PDF les documents Scribd")
-        print("3 étapes automatisées : Extraction → Tri → PDF")
+        print("✨ Nouveautés : Mode multi-documents + Dossier PDFs/")
+        print("4 étapes automatisées : Extraction → Tri → PDF → Organisation")
         print("="*60)
     
     def get_user_inputs(self):
         """Récupérer les paramètres de l'utilisateur"""
-        print("\n📝 CONFIGURATION")
+        print("\n📝 CHOIX DU MODE")
         print("-" * 30)
+        print("Voulez-vous traiter un ou plusieurs documents ?")
+        print("  [1] Un seul document (mode rapide)")
+        print("  [2] Plusieurs documents (mode avancé)")
+        
+        while True:
+            choice = input("\n➤ Votre choix (1 ou 2) : ").strip()
+            
+            if choice == '1':
+                # Mode simple - un seul document
+                return self._get_single_document_mode()
+            elif choice == '2':
+                # Mode multi-documents
+                return self._get_multi_document_mode()
+            else:
+                print("❌ Veuillez choisir 1 ou 2 !")
+    
+    def _get_single_document_mode(self):
+        """Mode simple pour un seul document"""
+        print("\n📝 CONFIGURATION SIMPLE")
+        print("-" * 30)
+        
+        # URL du document
+        url = input("🌐 URL du document Scribd : ").strip()
+        if not url:
+            print("❌ URL requise !")
+            return None
+        
+        # Validation basique de l'URL
+        if 'scribd.com' not in url:
+            print("⚠️ L'URL ne semble pas être un document Scribd")
+            confirm = input("Continuer quand même ? (o/N) : ").strip().lower()
+            if confirm not in ['o', 'oui', 'y', 'yes']:
+                return None
+        
+        # Nom du PDF de sortie
+        pdf_name = input("📄 Nom du PDF de sortie (ex: 'Mon Document.pdf') : ").strip()
+        if not pdf_name:
+            # Générer un nom par défaut basé sur l'URL
+            pdf_name = self._generate_pdf_name_from_url(url)
+            print(f"📄 Nom par défaut : {pdf_name}")
+        
+        # S'assurer que l'extension est .pdf
+        if not pdf_name.lower().endswith('.pdf'):
+            pdf_name += '.pdf'
+        
+        # Nombre maximum de pages à traiter
+        max_pages_input = input("📊 Nombre max de pages à traiter (Entrée pour 100) : ").strip()
+        try:
+            max_pages = int(max_pages_input) if max_pages_input else 100
+        except ValueError:
+            max_pages = 100
+        
+        # Retourner sous forme de liste pour compatibilité
+        return [{
+            'url': url,
+            'pdf_name': pdf_name,
+            'max_pages': max_pages
+        }]
+    
+    def _get_multi_document_mode(self):
+        """Mode avancé pour plusieurs documents"""
+        documents = self.get_multiple_documents()
+        return documents
+    
+    def _generate_pdf_name_from_url(self, url):
+        """Générer un nom de PDF à partir de l'URL"""
+        try:
+            # Extraire l'ID du document ou le titre depuis l'URL
+            if '/document/' in url:
+                parts = url.split('/document/')[-1].split('/')
+                if len(parts) >= 2:
+                    doc_name = parts[1].replace('-', ' ').title()
+                    return f"{doc_name}.pdf"
+            
+            return "document_scribd.pdf"
+        except:
+            return "document_scribd.pdf"
+    
+    def get_multiple_documents(self):
+        """Interface pour collecter plusieurs documents"""
+        print("\n📚 CONFIGURATION MULTI-DOCUMENTS")
+        print("=" * 50)
+        print("Ajoutez autant de documents Scribd que vous voulez")
+        print("Chaque document aura son propre PDF")
+        print("=" * 50)
+        
+        documents = []
+        
+        while True:
+            print(f"\n📋 DOCUMENTS CONFIGURÉS ({len(documents)})")
+            print("-" * 30)
+            
+            # Afficher la liste actuelle
+            if documents:
+                for i, doc in enumerate(documents, 1):
+                    print(f"  {i}. 📄 {doc['pdf_name']}")
+                    print(f"     🌐 {doc['url'][:60]}{'...' if len(doc['url']) > 60 else ''}")
+                    print(f"     📊 Max {doc['max_pages']} pages")
+            else:
+                print("  (Aucun document configuré)")
+            
+            print("\n🎛️  ACTIONS DISPONIBLES")
+            print("  [a] Ajouter un document")
+            if documents:
+                print("  [s] Supprimer un document")
+                print("  [m] Modifier un document")
+                print("  [t] Terminer et lancer le traitement")
+            print("  [q] Quitter")
+            
+            choice = input("\n➤ Votre choix : ").strip().lower()
+            
+            if choice == 'a':
+                doc = self._get_single_document_config(len(documents) + 1)
+                if doc:
+                    documents.append(doc)
+                    print(f"✅ Document '{doc['pdf_name']}' ajouté !")
+            
+            elif choice == 's' and documents:
+                self._remove_document(documents)
+            
+            elif choice == 'm' and documents:
+                self._modify_document(documents)
+            
+            elif choice == 't' and documents:
+                return documents
+            
+            elif choice == 'q':
+                confirm = input("❓ Êtes-vous sûr de vouloir quitter ? (o/N) : ").strip().lower()
+                if confirm in ['o', 'oui', 'y', 'yes']:
+                    return None
+            
+            else:
+                print("❌ Choix invalide !")
+    
+    def _get_single_document_config(self, doc_number):
+        """Configurer un seul document"""
+        print(f"\n📄 DOCUMENT #{doc_number}")
+        print("-" * 25)
         
         # URL du document
         url = input("🌐 URL du document Scribd : ").strip()
@@ -81,79 +220,188 @@ class ScribdInterface:
             'max_pages': max_pages
         }
     
-    def _generate_pdf_name_from_url(self, url):
-        """Générer un nom de PDF à partir de l'URL"""
-        try:
-            # Extraire l'ID du document ou le titre depuis l'URL
-            if '/document/' in url:
-                parts = url.split('/document/')[-1].split('/')
-                if len(parts) >= 2:
-                    doc_name = parts[1].replace('-', ' ').title()
-                    return f"{doc_name}.pdf"
-            
-            return "document_scribd.pdf"
-        except:
-            return "document_scribd.pdf"
-    
-    def run_complete_workflow(self, config):
-        """Exécuter le workflow complet"""
-        print(f"\n🚀 DÉBUT DU WORKFLOW COMPLET")
-        print(f"📄 URL : {config['url']}")
-        print(f"📁 PDF : {config['pdf_name']}")
-        print(f"📊 Max pages : {config['max_pages']}")
+    def _remove_document(self, documents):
+        """Supprimer un document de la liste"""
+        print("\n🗑️  SUPPRIMER UN DOCUMENT")
+        print("-" * 25)
+        
+        for i, doc in enumerate(documents, 1):
+            print(f"  {i}. {doc['pdf_name']}")
         
         try:
+            choice = int(input("\n➤ Numéro du document à supprimer : ").strip())
+            if 1 <= choice <= len(documents):
+                removed = documents.pop(choice - 1)
+                print(f"✅ Document '{removed['pdf_name']}' supprimé !")
+            else:
+                print("❌ Numéro invalide !")
+        except ValueError:
+            print("❌ Veuillez entrer un numéro valide !")
+    
+    def _modify_document(self, documents):
+        """Modifier un document de la liste"""
+        print("\n✏️  MODIFIER UN DOCUMENT")
+        print("-" * 25)
+        
+        for i, doc in enumerate(documents, 1):
+            print(f"  {i}. {doc['pdf_name']}")
+        
+        try:
+            choice = int(input("\n➤ Numéro du document à modifier : ").strip())
+            if 1 <= choice <= len(documents):
+                print(f"\n📝 Modification du document #{choice}")
+                new_doc = self._get_single_document_config(choice)
+                if new_doc:
+                    documents[choice - 1] = new_doc
+                    print(f"✅ Document modifié !")
+            else:
+                print("❌ Numéro invalide !")
+        except ValueError:
+            print("❌ Veuillez entrer un numéro valide !")
+    
+    def run_complete_workflow(self, documents_list):
+        """Exécuter le workflow complet pour un ou plusieurs documents"""
+        if not documents_list:
+            print("❌ Aucun document à traiter !")
+            return False
+        
+        # S'assurer que le dossier PDFs existe
+        self._ensure_pdfs_directory()
+        
+        total_docs = len(documents_list)
+        successful_docs = []
+        failed_docs = []
+        
+        print(f"\n🚀 DÉBUT DU WORKFLOW MULTI-DOCUMENTS")
+        print(f"📊 Nombre de documents à traiter : {total_docs}")
+        print("="*60)
+        
+        start_time = time.time()
+        
+        for doc_index, config in enumerate(documents_list, 1):
+            print(f"\n📄 DOCUMENT {doc_index}/{total_docs}")
+            print(f"🎯 {config['pdf_name']}")
+            print("-" * 50)
+            
+            doc_start_time = time.time()
+            success = self._process_single_document(config, doc_index, total_docs)
+            doc_end_time = time.time()
+            
+            if success:
+                successful_docs.append(config['pdf_name'])
+                doc_time = doc_end_time - doc_start_time
+                print(f"✅ Document {doc_index} terminé en {doc_time:.1f}s")
+            else:
+                failed_docs.append(config['pdf_name'])
+                print(f"❌ Échec du document {doc_index}")
+        
+        # Nettoyage final
+        print(f"\n🧹 NETTOYAGE FINAL DES FICHIERS TEMPORAIRES")
+        self._cleanup_json_files()
+        
+        # Résumé final
+        total_time = time.time() - start_time
+        self._display_final_summary(successful_docs, failed_docs, total_time)
+        
+        return len(successful_docs) > 0
+    
+    def _process_single_document(self, config, doc_index, total_docs):
+        """Traiter un seul document"""
+        try:
             # ÉTAPE 1: Extraction des liens
-            print(f"\n" + "="*50)
-            print("📥 ÉTAPE 1/3 : EXTRACTION DES LIENS")
-            print("="*50)
+            print(f"📥 ÉTAPE 1/3 : EXTRACTION DES LIENS")
+            print(f"🌐 URL : {config['url'][:60]}{'...' if len(config['url']) > 60 else ''}")
+            
+            # Reset des liens pour chaque document
+            self.all_links = set()
             
             links = self._extract_links(config['url'], config['max_pages'])
             if not links:
                 print("❌ Aucun lien extrait !")
                 return False
             
-            print(f"✅ {len(links)} liens extraits avec succès")
+            print(f"✅ {len(links)} liens extraits")
             
             # ÉTAPE 2: Tri des liens
-            print(f"\n" + "="*50)
-            print("🔢 ÉTAPE 2/3 : TRI DES LIENS")
-            print("="*50)
-            
+            print(f"🔢 ÉTAPE 2/3 : TRI DES LIENS")
             sorted_links = self._sort_links(links)
-            print(f"✅ {len(sorted_links)} liens triés par numéro de page")
+            print(f"✅ {len(sorted_links)} liens triés")
             
-            # ÉTAPE 3: Création du PDF
-            print(f"\n" + "="*50)
-            print("📄 ÉTAPE 3/3 : CRÉATION DU PDF")
-            print("="*50)
-            
-            success = self._create_pdf(sorted_links, config['pdf_name'])
+            # ÉTAPE 3: Création du PDF dans le dossier PDFs/
+            print(f"📄 ÉTAPE 3/3 : CRÉATION DU PDF")
+            pdf_path = os.path.join("PDFs", config['pdf_name'])
+            success = self._create_pdf(sorted_links, pdf_path)
             
             if success:
-                # ÉTAPE 4: Nettoyage des fichiers temporaires
-                print(f"\n🧹 NETTOYAGE DES FICHIERS TEMPORAIRES")
-                self._cleanup_json_files()
-                
-                print(f"\n🎉 WORKFLOW TERMINÉ AVEC SUCCÈS !")
-                print(f"📁 PDF créé : {config['pdf_name']}")
-                
                 # Afficher la taille du fichier
                 try:
-                    file_size = os.path.getsize(config['pdf_name'])
+                    file_size = os.path.getsize(pdf_path)
                     size_mb = file_size / (1024 * 1024)
+                    print(f"📁 PDF créé : PDFs/{config['pdf_name']}")
                     print(f"📏 Taille : {size_mb:.1f} MB")
                 except:
-                    pass
+                    print(f"📁 PDF créé : PDFs/{config['pdf_name']}")
                 
                 return True
             else:
                 print("❌ Erreur lors de la création du PDF")
                 return False
-            
+                
         except Exception as e:
-            print(f"💥 Erreur workflow : {e}")
+            print(f"❌ Erreur document : {e}")
             return False
+    
+    def _display_final_summary(self, successful_docs, failed_docs, total_time):
+        """Afficher le résumé final"""
+        print("\n" + "="*60)
+        print("🎉 RÉSUMÉ FINAL DU TRAITEMENT")
+        print("="*60)
+        
+        print(f"⏱️  Temps total : {total_time:.1f}s")
+        print(f"✅ Documents réussis : {len(successful_docs)}")
+        print(f"❌ Documents échoués : {len(failed_docs)}")
+        
+        if successful_docs:
+            print(f"\n📁 PDFs créés dans le dossier 'PDFs/' :")
+            for pdf_name in successful_docs:
+                print(f"   📄 {pdf_name}")
+                
+        if failed_docs:
+            print(f"\n❌ Documents échoués :")
+            for pdf_name in failed_docs:
+                print(f"   ⚠️  {pdf_name}")
+        
+        if successful_docs:
+            # Calculer la taille totale
+            total_size = 0
+            for pdf_name in successful_docs:
+                try:
+                    pdf_path = os.path.join("PDFs", pdf_name)
+                    total_size += os.path.getsize(pdf_path)
+                except:
+                    pass
+            
+            if total_size > 0:
+                total_size_mb = total_size / (1024 * 1024)
+                print(f"\n📊 Taille totale des PDFs : {total_size_mb:.1f} MB")
+        
+        print("="*60)
+    
+    def _ensure_pdfs_directory(self):
+        """S'assurer que le dossier PDFs existe"""
+        pdfs_dir = "PDFs"
+        
+        if not os.path.exists(pdfs_dir):
+            try:
+                os.makedirs(pdfs_dir)
+                print(f"📁 Dossier '{pdfs_dir}/' créé")
+            except OSError as e:
+                print(f"❌ Impossible de créer le dossier '{pdfs_dir}/' : {e}")
+                return False
+        else:
+            print(f"📁 Dossier '{pdfs_dir}/' déjà existant")
+        
+        return True
     
     def _extract_links(self, url, max_pages):
         """Extraire les liens depuis Scribd"""
@@ -462,23 +710,31 @@ def main():
     while True:
         interface.print_header()
         
-        # Récupérer les paramètres
-        config = interface.get_user_inputs()
-        if not config:
+        # Récupérer les paramètres (maintenant une liste de documents)
+        documents_list = interface.get_user_inputs()
+        if not documents_list:
             print("❌ Configuration annulée")
             break
         
-        # Confirmation
-        print(f"\n📋 RÉSUMÉ")
-        print(f"   🌐 URL : {config['url']}")
-        print(f"   📄 PDF : {config['pdf_name']}")
-        print(f"   📊 Max pages : {config['max_pages']}")
+        # Confirmation avec résumé des documents
+        print(f"\n📋 RÉSUMÉ DES DOCUMENTS")
+        print("-" * 40)
+        for i, config in enumerate(documents_list, 1):
+            print(f"📄 Document {i}")
+            print(f"   🌐 URL : {config['url'][:50]}{'...' if len(config['url']) > 50 else ''}")
+            print(f"   📁 PDF : {config['pdf_name']}")
+            print(f"   📊 Max pages : {config['max_pages']}")
+            if i < len(documents_list):
+                print()
         
-        confirm = input("\n🚀 Lancer le scraping ? (O/n) : ").strip().lower()
+        print(f"\n📊 Total : {len(documents_list)} document(s) à traiter")
+        print(f"📁 Destination : Dossier PDFs/")
+        
+        confirm = input("\n🚀 Lancer le traitement ? (O/n) : ").strip().lower()
         if confirm in ['', 'o', 'oui', 'y', 'yes']:
             
             start_time = time.time()
-            success = interface.run_complete_workflow(config)
+            success = interface.run_complete_workflow(documents_list)
             end_time = time.time()
             
             duration = end_time - start_time
@@ -486,14 +742,14 @@ def main():
             seconds = int(duration % 60)
             
             if success:
-                print(f"\n✅ SUCCÈS TOTAL en {minutes}m {seconds}s !")
-                print(f"📁 Votre PDF : {config['pdf_name']}")
+                print(f"\n✅ TRAITEMENT TERMINÉ en {minutes}m {seconds}s !")
+                print(f"📁 Vos PDFs sont dans le dossier 'PDFs/'")
             else:
-                print(f"\n❌ Échec après {minutes}m {seconds}s")
+                print(f"\n❌ Échec du traitement après {minutes}m {seconds}s")
         
         # Demander si on veut continuer
         print(f"\n" + "="*60)
-        continue_choice = input("🔄 Scraper un autre document ? (o/N) : ").strip().lower()
+        continue_choice = input("🔄 Traiter d'autres documents ? (o/N) : ").strip().lower()
         if continue_choice not in ['o', 'oui', 'y', 'yes']:
             break
     
